@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+<title>Calculadora de Instalaciones Eléctricas Domiciliarias</title>
+<style>
+  :root{
+    --bg: #12161c;
+    --panel: #1b212b;
+    --panel-2: #212836;
+    --line: #2a3241;
+    --text: #e8ebf0;
+    --text-dim: #8a93a3;
+    --yellow: #f2b705;
+    --yellow-dim: #a67d05;
+    --green: #35c26b;
+    --green-bg: rgba(53,194,107,.12);
+    --red: #ea5b4c;
+    --red-bg: rgba(234,91,76,.12);
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --disp: 'Space Grotesk', var(--sans);
+    --radius: 10px;
+  }
+  [data-theme="light"]{
+    --bg: #f2f0ea;
+    --panel: #ffffff;
+    --panel-2: #f7f5ef;
+    --line: #ddd8cb;
+    --text: #1c1f26;
+    --text-dim: #6b6f78;
+    --green-bg: rgba(35,150,85,.10);
+    --red-bg: rgba(200,60,45,.09);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    transition: background .25s ease, color .25s ease;
+    padding-bottom: 40px;
+  }
+  a{ color: inherit; }
+
+  /* ---------- Header ---------- */
+  header{
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .brand-mark{
+    width: 34px; height:34px; flex:0 0 auto;
+    border-radius: 7px;
+    background: var(--yellow);
+    display:flex; align-items:center; justify-content:center;
+    color:#171a1e; font-family: var(--mono); font-weight:700; font-size:14px;
+  }
+  .brand-text h1{
+    font-family: var(--disp);
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+  }
+  .brand-text span{
+    display:block;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+  #themeToggle{
+    flex: 0 0 auto;
+    width: 38px; height:38px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 16px;
+  }
+  #themeToggle:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible{
+    outline: 2px solid var(--yellow);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Layout ---------- */
+  main{
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 22px 20px 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  @media (min-width: 900px){
+    main{
+      grid-template-columns: 1fr 380px;
+      align-items: start;
+    }
+  }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .panel h2{
+    font-family: var(--disp);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+    margin: 0 0 16px;
+    color: var(--text);
+    display:flex;
+    align-items:center;
+    gap: 8px;
+  }
+  .panel h2 .idx{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--bg);
+    background: var(--yellow);
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    display:flex; align-items:center; justify-content:center;
+    flex: 0 0 auto;
+  }
+
+  .field-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+  }
+  @media (max-width: 520px){
+    .field-grid{ grid-template-columns: 1fr; }
+  }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field.full{ grid-column: 1 / -1; }
+  .field label{
+    font-size: 12.5px;
+    color: var(--text-dim);
+    display:flex;
+    justify-content: space-between;
+    align-items:baseline;
+  }
+  .field label .hint{ font-size: 11px; color: var(--text-dim); opacity:.75; }
+
+  select, input[type=number]{
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 10px 11px;
+    border-radius: 7px;
+    font-size: 14.5px;
+    font-family: var(--mono);
+    appearance: none;
+  }
+  select{
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 16px) center, calc(100% - 11px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 30px;
+  }
+
+  /* voltage segmented control */
+  .seg{
+    display:flex;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    overflow:hidden;
+  }
+  .seg button{
+    flex:1;
+    padding: 10px 8px;
+    background: var(--panel-2);
+    color: var(--text-dim);
+    border: none;
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor:pointer;
+    border-right: 1px solid var(--line);
+  }
+  .seg button:last-child{ border-right:none; }
+  .seg button.active{
+    background: var(--yellow);
+    color: #171a1e;
+    font-weight: 600;
+  }
+
+  .load-row{ display:flex; gap:8px; }
+  .load-row input{ flex: 1 1 auto; min-width: 0; }
+  .load-row select{ flex: 0 0 84px; width:84px; padding-left:8px; padding-right:24px; }
+
+  fieldset{ border:none; margin:0; padding: 18px 0 0; border-top: 1px solid var(--line); margin-top: 18px; }
+  fieldset legend{ padding:0; margin-bottom: 14px; font-size: 12.5px; color: var(--text-dim); }
+
+  /* ---------- Results panel ---------- */
+  .results{
+    position: static;
+  }
+  @media (min-width: 900px){
+    .results{ position: sticky; top: 74px; }
+  }
+
+  .readout{
+    font-family: var(--mono);
+    text-align: left;
+    padding: 4px 0 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .readout .label{ font-size: 11.5px; color: var(--text-dim); text-transform: none; }
+  .readout .value{
+    font-size: 40px;
+    font-weight: 600;
+    color: var(--yellow);
+    line-height: 1.1;
+    margin-top: 4px;
+    letter-spacing: -0.01em;
+  }
+  .readout .value small{ font-size: 17px; color: var(--text-dim); font-weight:400; margin-left:4px; }
+
+  .row{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 7px 0;
+    font-size: 13.5px;
+  }
+  .row .k{ color: var(--text-dim); }
+  .row .v{ font-family: var(--mono); font-size: 14px; }
+
+  /* breaker switch indicator */
+  .breaker-block{
+    display:flex;
+    align-items:center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 8px;
+    margin: 14px 0;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+  .switch{
+    width: 30px; height: 46px;
+    border-radius: 5px;
+    background: #0d0f13;
+    border: 1px solid #000;
+    position: relative;
+    flex: 0 0 auto;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
+  }
+  .switch::after{
+    content:"";
+    position:absolute;
+    left: 50%;
+    top: 6px;
+    width: 14px; height: 18px;
+    transform: translateX(-50%);
+    border-radius: 3px;
+    background: var(--text-dim);
+    transition: top .3s ease, background .3s ease;
+  }
+  .switch.on::after{ top: 22px; background: var(--green); }
+  .switch.off::after{ top: 6px; background: var(--red); }
+
+  .breaker-msg .status{
+    font-family: var(--disp);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .breaker-msg .status.ok{ color: var(--green); }
+  .breaker-msg .status.bad{ color: var(--red); }
+  .breaker-msg p{
+    margin: 3px 0 0;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  /* chain rule bar Ib <= In <= Iz */
+  .chain{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+  }
+  .chain span.op{ color: var(--text-dim); font-size: 11px; }
+  .chain b{ font-size: 14px; }
+  .chain .ok-op{ color: var(--green); }
+  .chain .bad-op{ color: var(--red); }
+
+  /* voltage drop gauge */
+  .gauge-wrap{ margin-top: 4px; }
+  .gauge-track{
+    height: 9px;
+    border-radius: 5px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    position: relative;
+  }
+  .gauge-fill{
+    height: 100%;
+    border-radius: 5px 0 0 5px;
+    background: var(--green);
+    transition: width .35s ease, background .35s ease;
+  }
+  .gauge-fill.bad{ background: var(--red); }
+  .gauge-limit{
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    background: var(--text);
+    opacity: .6;
+    left: 100%;
+  }
+  .gauge-labels{
+    display:flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 5px;
+    font-family: var(--mono);
+  }
+
+  .alert{
+    margin-top: 14px;
+    padding: 11px 13px;
+    border-radius: 7px;
+    font-size: 13px;
+    display:flex;
+    gap: 8px;
+    align-items:flex-start;
+  }
+  .alert.ok{ background: var(--green-bg); color: var(--green); }
+  .alert.bad{ background: var(--red-bg); color: var(--red); }
+  .alert b{ font-weight:600; }
+
+  .actions{ display:flex; gap:10px; margin-top: 18px; }
+  .btn{
+    flex: 1;
+    padding: 11px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 13.5px;
+    font-family: var(--sans);
+    font-weight: 500;
+    cursor: pointer;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+  }
+  .btn.primary{
+    background: var(--yellow);
+    border-color: var(--yellow);
+    color: #171a1e;
+    font-weight: 600;
+  }
+  .btn:active{ transform: translateY(1px); }
+
+  footer{
+    max-width: 1120px;
+    margin: 26px auto 0;
+    padding: 0 20px;
+    color: var(--text-dim);
+    font-size: 11.5px;
+    text-align: center;
+  }
+
+  #summaryOutput{ position:absolute; left:-9999px; top:-9999px; }
+
+  .toast{
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 11px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 50;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">In</div>
+    <div class="brand-text">
+      <h1>Calculadora de Instalaciones Eléctricas</h1>
+      <span>Ib · In · Iz · Caída de tensión</span>
+    </div>
+  </div>
+  <button id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
+</header>
+
+<main>
+  <!-- ================= INPUT PANEL ================= -->
+  <section class="panel" aria-label="Datos del circuito">
+
+    <h2><span class="idx">1</span>Datos de entrada</h2>
+
+    <div class="field full">
+      <label>Tensión de suministro</label>
+      <div class="seg" role="group" aria-label="Tensión">
+        <button type="button" id="v220" class="active" onclick="setVoltage(220)">220 V · Monofásico</button>
+        <button type="button" id="v380" onclick="setVoltage(380)">380 V · Trifásico</button>
+      </div>
+    </div>
+
+    <div class="field-grid" style="margin-top:14px;">
+      <div class="field full">
+        <label>Carga del circuito</label>
+        <div class="load-row">
+          <input type="number" id="loadValue" value="3500" min="0" step="1" oninput="calc()">
+          <select id="loadUnit" onchange="calc()">
+            <option value="W">W</option>
+            <option value="kW">kW</option>
+            <option value="A">A</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Longitud del tramo <span class="hint">metros</span></label>
+        <input type="number" id="length" value="15" min="0" step="0.5" oninput="calc()">
+      </div>
+
+      <div class="field">
+        <label>Factor de potencia <span class="hint">cos φ</span></label>
+        <input type="number" id="pf" value="0.9" min="0.1" max="1" step="0.01" oninput="calc()">
+      </div>
+
+      <div class="field">
+        <label>Sección del conductor <span class="hint">mm²</span></label>
+        <select id="gauge" onchange="calc()">
+          <option value="1.5">1.5 mm²</option>
+          <option value="2.5" selected>2.5 mm²</option>
+          <option value="4">4 mm²</option>
+          <option value="6">6 mm²</option>
+          <option value="10">10 mm²</option>
+          <option value="16">16 mm²</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Aislamiento del cable</label>
+        <select id="insulation" onchange="calc()">
+          <option value="NYA">NYA (PVC 70°C)</option>
+          <option value="EVA">EVA (Goma, uso flexible)</option>
+          <option value="RZ1-K">RZ1-K (XLPE 90°C, LSOH)</option>
+        </select>
+      </div>
+    </div>
+
+    <fieldset>
+      <legend>2 · Coordinación de protecciones — Ib ≤ In ≤ Iz</legend>
+      <div class="breaker-block">
+        <div class="switch off" id="switchIcon"></div>
+        <div class="breaker-msg">
+          <div class="status bad" id="breakerStatus">Sin datos</div>
+          <p id="breakerDetail">Ingresa los datos del circuito para evaluar la coordinación.</p>
+        </div>
+      </div>
+      <div class="chain">
+        <span><span class="op">Ib</span> <b id="chainIb">–</b></span>
+        <span class="op" id="op1">≤</span>
+        <span><span class="op">In</span> <b id="chainIn">–</b></span>
+        <span class="op" id="op2">≤</span>
+        <span><span class="op">Iz</span> <b id="chainIz">–</b></span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3 · Caída de tensión</legend>
+      <div class="row"><span class="k">ΔV calculada</span><span class="v" id="dvVal">–</span></div>
+      <div class="row"><span class="k">Tensión en el extremo del tramo</span><span class="v" id="vFinal">–</span></div>
+      <div class="gauge-wrap">
+        <div class="gauge-track">
+          <div class="gauge-fill" id="dvFill" style="width:0%"></div>
+          <div class="gauge-limit"></div>
+        </div>
+        <div class="gauge-labels"><span>0%</span><span>Límite normativo 3%</span></div>
+      </div>
+      <div class="alert" id="dvAlert"></div>
+    </fieldset>
+
+  </section>
+
+  <!-- ================= RESULTS PANEL ================= -->
+  <aside class="panel results" aria-label="Resumen de resultados">
+    <h2><span class="idx">Σ</span>Resumen del circuito</h2>
+
+    <div class="readout">
+      <div class="label">Corriente de servicio</div>
+      <div class="value" id="ibBig">0.00<small>A</small></div>
+    </div>
+
+    <div class="row"><span class="k">Tensión de servicio</span><span class="v" id="rVoltage">220 V mono.</span></div>
+    <div class="row"><span class="k">Carga</span><span class="v" id="rLoad">–</span></div>
+    <div class="row"><span class="k">Conductor</span><span class="v" id="rGauge">–</span></div>
+    <div class="row"><span class="k">Iz admisible</span><span class="v" id="rIz">–</span></div>
+    <div class="row"><span class="k">Disyuntor sugerido (In)</span><span class="v" id="rBreaker">–</span></div>
+    <div class="row"><span class="k">Caída de tensión</span><span class="v" id="rDrop">–</span></div>
+
+    <div class="actions">
+      <button class="btn primary" onclick="copySummary()">📋 Copiar resumen</button>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  Cálculos referenciales para apoyo en terreno según criterios usuales de NCh Elec. 4/2003 (ampacidad método B1, resistividad Cu ≈ 1/56 Ω·mm²/m). Verifica siempre contra la norma vigente y el criterio del proyectista responsable.
+</footer>
+
+<div class="toast" id="toast"></div>
+<textarea id="summaryOutput" readonly></textarea>
+
+<script>
+  // ---------------- Reference tables ----------------
+  // Ampacidad base (A) por sección, referencia NYA/PVC 70°C, método instalación en tubería (B1)
+  const baseAmpacity = {
+    "1.5": 15,
+    "2.5": 21,
+    "4":   28,
+    "6":   36,
+    "10":  50,
+    "16":  68
+  };
+  // Factor de corrección por tipo de aislamiento respecto de la base NYA/PVC
+  const insulationFactor = {
+    "NYA":   1.00,
+    "EVA":   0.85,
+    "RZ1-K": 1.15
+  };
+  // Calibres comerciales de disyuntores magnetotérmicos (A)
+  const breakerSizes = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100];
+
+  const RHO = 1 / 56; // resistividad del cobre, Ω·mm²/m (conductividad 56 m/Ω·mm²)
+
+  let voltage = 220;
+  let isThreePhase = false;
+
+  function setVoltage(v){
+    voltage = v;
+    isThreePhase = (v === 380);
+    document.getElementById('v220').classList.toggle('active', v === 220);
+    document.getElementById('v380').classList.toggle('active', v === 380);
+    calc();
+  }
+
+  function fmt(n, d = 2){
+    if (!isFinite(n)) return '–';
+    return n.toLocaleString('es-CL', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function nextBreaker(ib){
+    for (const b of breakerSizes){
+      if (b >= ib) return b;
+    }
+    return breakerSizes[breakerSizes.length - 1];
+  }
+
+  function calc(){
+    const loadValueRaw = parseFloat(document.getElementById('loadValue').value) || 0;
+    const loadUnit = document.getElementById('loadUnit').value;
+    const length = parseFloat(document.getElementById('length').value) || 0;
+    let pf = parseFloat(document.getElementById('pf').value);
+    if (!pf || pf <= 0) pf = 0.9;
+    if (pf > 1) pf = 1;
+    const gauge = document.getElementById('gauge').value;
+    const insulation = document.getElementById('insulation').value;
+
+    // --- Corriente de servicio Ib ---
+    let ib;
+    if (loadUnit === 'A'){
+      ib = loadValueRaw;
+    } else {
+      const watts = loadUnit === 'kW' ? loadValueRaw * 1000 : loadValueRaw;
+      ib = isThreePhase
+        ? watts / (Math.sqrt(3) * voltage * pf)
+        : watts / (voltage * pf);
+    }
+
+    // --- Iz: ampacidad admisible del conductor seleccionado ---
+    const iz = baseAmpacity[gauge] * insulationFactor[insulation];
+
+    // --- In: disyuntor comercial inmediato superior a Ib ---
+    const inBreaker = nextBreaker(ib);
+
+    // --- Verificación regla de oro Ib <= In <= Iz ---
+    const cond1 = ib <= inBreaker;
+    const cond2 = inBreaker <= iz;
+    const protectionOk = cond1 && cond2;
+
+    // --- Caída de tensión ---
+    let dvVolts;
+    if (isThreePhase){
+      dvVolts = Math.sqrt(3) * RHO * length * ib * pf / parseFloat(gauge);
+    } else {
+      dvVolts = 2 * RHO * length * ib * pf / parseFloat(gauge);
+    }
+    const dvPercent = (dvVolts / voltage) * 100;
+    const vFinal = voltage - dvVolts;
+    const dropOk = dvPercent <= 3;
+
+    // ---------------- Render: Big readout ----------------
+    document.getElementById('ibBig').innerHTML = fmt(ib) + '<small>A</small>';
+    document.getElementById('rVoltage').textContent = voltage + ' V ' + (isThreePhase ? 'trifásico' : 'monofásico');
+    const loadLabel = loadUnit === 'A' ? fmt(loadValueRaw, 1) + ' A' : fmt(loadValueRaw, loadUnit==='kW'?2:0) + ' ' + loadUnit;
+    document.getElementById('rLoad').textContent = loadLabel;
+    document.getElementById('rGauge').textContent = gauge + ' mm² · ' + insulation;
+    document.getElementById('rIz').textContent = fmt(iz, 1) + ' A';
+    document.getElementById('rBreaker').textContent = inBreaker + ' A';
+    document.getElementById('rDrop').textContent = fmt(dvPercent, 2) + '%';
+
+    // ---------------- Render: chain Ib <= In <= Iz ----------------
+    document.getElementById('chainIb').textContent = fmt(ib, 2) + 'A';
+    document.getElementById('chainIn').textContent = inBreaker + 'A';
+    document.getElementById('chainIz').textContent = fmt(iz, 1) + 'A';
+    const op1 = document.getElementById('op1');
+    const op2 = document.getElementById('op2');
+    op1.textContent = cond1 ? '≤' : '>';
+    op1.className = cond1 ? 'op ok-op' : 'op bad-op';
+    op2.textContent = cond2 ? '≤' : '>';
+    op2.className = cond2 ? 'op ok-op' : 'op bad-op';
+
+    // ---------------- Render: breaker switch ----------------
+    const sw = document.getElementById('switchIcon');
+    const status = document.getElementById('breakerStatus');
+    const detail = document.getElementById('breakerDetail');
+    if (protectionOk){
+      sw.className = 'switch on';
+      status.className = 'status ok';
+      status.textContent = 'Protección coordinada';
+      detail.textContent = 'El disyuntor de ' + inBreaker + ' A protege el conductor de ' + gauge + ' mm² y cubre la carga de servicio.';
+    } else {
+      sw.className = 'switch off';
+      status.className = 'status bad';
+      status.textContent = 'Protección no coordinada';
+      detail.textContent = !cond2
+        ? 'El disyuntor de ' + inBreaker + ' A supera la ampacidad del conductor (Iz = ' + fmt(iz,1) + ' A). Aumenta la sección o baja el calibre del disyuntor.'
+        : 'La corriente de servicio supera al disyuntor sugerido. Revisa la carga o el cálculo de Ib.';
+    }
+
+    // ---------------- Render: voltage drop gauge ----------------
+    const fill = document.getElementById('dvFill');
+    const pct = Math.max(0, Math.min(dvPercent, 6)); // escala visual hasta 6%
+    fill.style.width = ((pct / 6) * 100) + '%';
+    fill.className = 'gauge-fill' + (dropOk ? '' : ' bad');
+    document.getElementById('dvVal').textContent = fmt(dvPercent, 2) + '%  (' + fmt(dvVolts, 2) + ' V)';
+    document.getElementById('vFinal').textContent = fmt(vFinal, 1) + ' V';
+
+    const dvAlert = document.getElementById('dvAlert');
+    if (dropOk){
+      dvAlert.className = 'alert ok';
+      dvAlert.innerHTML = '<span>✓</span><span><b>Dentro de norma.</b> La caída de tensión (' + fmt(dvPercent,2) + '%) no supera el 3% permitido.</span>';
+    } else {
+      dvAlert.className = 'alert bad';
+      dvAlert.innerHTML = '<span>⚠</span><span><b>Fuera de norma.</b> La caída de tensión (' + fmt(dvPercent,2) + '%) supera el 3%. Aumenta la sección del conductor o reduce la longitud del tramo.</span>';
+    }
+
+    // Guardar último cálculo para exportar
+    window.__lastCalc = {
+      voltage, isThreePhase, loadLabel, length, pf, gauge, insulation,
+      ib, iz, inBreaker, protectionOk, dvPercent, dvVolts, vFinal
+    };
+  }
+
+  function buildSummaryText(){
+    const c = window.__lastCalc;
+    if (!c) return '';
+    const lines = [
+      'RESUMEN DE CIRCUITO ELÉCTRICO',
+      '------------------------------',
+      'Tensión: ' + c.voltage + ' V ' + (c.isThreePhase ? 'trifásico' : 'monofásico'),
+      'Carga: ' + c.loadLabel,
+      'Longitud del tramo: ' + c.length + ' m',
+      'Factor de potencia (cos φ): ' + c.pf,
+      'Conductor: ' + c.gauge + ' mm² · ' + c.insulation,
+      '',
+      'Corriente de servicio (Ib): ' + fmt(c.ib) + ' A',
+      'Ampacidad admisible (Iz): ' + fmt(c.iz, 1) + ' A',
+      'Disyuntor sugerido (In): ' + c.inBreaker + ' A',
+      'Coordinación Ib ≤ In ≤ Iz: ' + (c.protectionOk ? 'CUMPLE' : 'NO CUMPLE'),
+      '',
+      'Caída de tensión: ' + fmt(c.dvPercent, 2) + '% (' + fmt(c.dvVolts, 2) + ' V)',
+      'Tensión en el extremo del tramo: ' + fmt(c.vFinal, 1) + ' V',
+      'Límite normativo: 3% (' + (c.dvPercent <= 3 ? 'CUMPLE' : 'NO CUMPLE') + ')'
+    ];
+    return lines.join('\n');
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function copySummary(){
+    const text = buildSummaryText();
+    const ta = document.getElementById('summaryOutput');
+    ta.value = text;
+    ta.select();
+    ta.setSelectionRange(0, 999999);
+    try {
+      navigator.clipboard.writeText(text).then(
+        () => showToast('Resumen copiado al portapapeles'),
+        () => { document.execCommand('copy'); showToast('Resumen copiado al portapapeles'); }
+      );
+    } catch (e) {
+      document.execCommand('copy');
+      showToast('Resumen copiado al portapapeles');
+    }
+  }
+
+  // ---------------- Theme ----------------
+  function applyTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('themeToggle').textContent = theme === 'light' ? '☀️' : '🌙';
+  }
+  function toggleTheme(){
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+  }
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(prefersLight ? 'light' : 'dark');
+
+  // ---------------- Init ----------------
+  calc();
+</script>
+
+</body>
+</html>
