@@ -164,7 +164,7 @@
   }
   .field label .hint{ font-size: 11px; color: var(--text-dim); opacity:.75; }
 
-  select, input[type=number]{
+  select, input[type=number], input[type=text]{
     width: 100%;
     background: var(--panel-2);
     border: 1px solid var(--line);
@@ -403,6 +403,7 @@
     font-size: 11.5px;
     text-align: center;
   }
+  footer .legal-box{ text-align: left; }
 
   #summaryOutput{ position:absolute; left:-9999px; top:-9999px; }
 
@@ -455,6 +456,15 @@
     margin-bottom: 3px;
   }
   .diag-body p{ margin: 0; font-size: 13px; color: var(--text-dim); }
+  .diag-body .solution{
+    margin-top: 7px;
+    padding: 8px 10px;
+    background: var(--green-bg);
+    color: var(--green);
+    border-radius: 6px;
+    font-size: 12.5px;
+  }
+  .diag-body .solution b{ font-weight:600; }
   .ric-badge{
     font-family: var(--mono);
     font-size: 11px;
@@ -481,6 +491,89 @@
     border-radius: 4px;
     border: 1px solid var(--line);
   }
+
+  /* ---------- Tablero de cargas ---------- */
+  .add-circuit-row{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr auto;
+    gap: 12px;
+    align-items:end;
+  }
+  @media (max-width: 640px){
+    .add-circuit-row{ grid-template-columns: 1fr; }
+  }
+  .add-circuit-row .btn{ flex: 0 0 auto; white-space: nowrap; }
+
+  .tablero-empty{
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 18px 0;
+    text-align: center;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    margin-top: 16px;
+  }
+
+  .tablero-table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.8px;
+    margin-top: 16px;
+  }
+  .tablero-table th, .tablero-table td{
+    padding: 9px 8px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  .tablero-table th{
+    color: var(--text-dim);
+    font-weight: 500;
+    font-size: 11.5px;
+  }
+  .tablero-table td{ font-family: var(--mono); }
+  .tablero-table td.num, .tablero-table th.num{ text-align: right; }
+  .remove-btn{
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    font-family: var(--sans);
+  }
+
+  .totals-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    margin-top: 18px;
+  }
+  @media (max-width: 640px){
+    .totals-grid{ grid-template-columns: 1fr; }
+  }
+  .total-card{
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .total-card .tk{ font-size: 11px; color: var(--text-dim); }
+  .total-card .tv{ font-family: var(--mono); font-size: 16.5px; font-weight: 600; margin-top: 4px; }
+  .total-card.span2{ grid-column: 1 / -1; }
+
+  /* ---------- Aviso legal ---------- */
+  .legal-box{
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 6px;
+    background: var(--panel-2);
+    font-size: 11.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .legal-box b{ color: var(--text); }
 </style>
 </head>
 <body>
@@ -490,7 +583,7 @@
     <div class="brand-mark">In</div>
     <div class="brand-text">
       <h1>Calculadora de Instalaciones Eléctricas</h1>
-      <span>Ib · In · Iz · ΔV · PE · RCD</span>
+      <span>Ib · In · Iz · ΔV · PE · RCD · Tablero</span>
     </div>
   </div>
   <button id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
@@ -676,10 +769,62 @@
     <h2><span class="idx">!</span>Recomendaciones técnicas y base normativa</h2>
     <div id="diagList"></div>
   </section>
+
+  <!-- ================= TABLERO DE CARGAS ================= -->
+  <section class="panel full-span" aria-label="Tablero de cargas">
+    <h2><span class="idx">T</span>Tablero de cargas — suma y alimentador general</h2>
+
+    <div class="add-circuit-row">
+      <div class="field">
+        <label>Tipo de circuito</label>
+        <select id="circuitType">
+          <option value="alumbrado">Alumbrado</option>
+          <option value="enchufes">Enchufes (tomacorrientes)</option>
+          <option value="cocina_termo">Cocina / Termo eléctrico</option>
+          <option value="climatizacion">Climatización</option>
+          <option value="fuerza_motriz">Fuerza motriz / especiales</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Potencia instalada <span class="hint">kW</span></label>
+        <input type="number" id="circuitPower" value="1.5" min="0" step="0.1">
+      </div>
+      <button type="button" class="btn primary" onclick="addCircuit()">+ Añadir circuito al tablero</button>
+    </div>
+
+    <p class="tablero-empty" id="tableroEmpty">Aún no agregas circuitos al tablero.</p>
+    <table class="tablero-table" id="tableroTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>Circuito</th>
+          <th>Tipo</th>
+          <th class="num">Instalada</th>
+          <th class="num">F. demanda</th>
+          <th class="num">Demandada</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableroBody"></tbody>
+    </table>
+
+    <div class="totals-grid" id="tableroTotals" style="display:none;">
+      <div class="total-card"><div class="tk">Carga total instalada</div><div class="tv" id="totInstalada">–</div></div>
+      <div class="total-card"><div class="tk">Carga máxima demandada</div><div class="tv" id="totDemandada">–</div></div>
+      <div class="total-card"><div class="tk">Disyuntor general sugerido</div><div class="tv" id="totBreaker">–</div></div>
+      <div class="total-card"><div class="tk">Alimentador general mínimo</div><div class="tv" id="totFeeder">–</div></div>
+      <div class="total-card span2"><div class="tk">Diferencial general sugerido</div><div class="tv" id="totDiff">–</div></div>
+    </div>
+
+    <p class="factor-note">Factores de demanda referenciales por tipo de circuito (ajustables a la tabla de tu curso o del pliego RIC N°03 / NCh Elec. 4/2003 aplicable). Cada circuito se calcula como potencia instalada × su propio factor de demanda; la suma resultante es la carga máxima demandada estimada del tablero. El alimentador y disyuntor general usan la tensión, cos φ, aislamiento y canalización configurados arriba.</p>
+  </section>
 </main>
 
 <footer>
-  Cálculos referenciales para apoyo en terreno según criterios usuales de RIC / NCh Elec. 4/2003 (ampacidad método B1, resistividad Cu ≈ 1/56 Ω·mm²/m). Verifica siempre contra la norma vigente, la tabla de tu pliego RIC y el criterio del proyectista responsable.
+  <p>Cálculos referenciales para apoyo en terreno según criterios usuales de RIC / NCh Elec. 4/2003 (ampacidad método B1, resistividad Cu ≈ 1/56 Ω·mm²/m). Verifica siempre contra la norma vigente, la tabla de tu pliego RIC y el criterio del proyectista responsable.</p>
+  <div class="legal-box">
+    <b>Aviso Legal:</b> Esta herramienta es una guía de cálculo referencial de apoyo para el diseño de instalaciones eléctricas domiciliarias. Los proyectos y ejecuciones definitivas deben ser verificados y firmados por un Instalador Eléctrico Autorizado por la SEC (Superintendencia de Electricidad y Combustibles) conforme a la normativa vigente.
+  </div>
 </footer>
 
 <div class="toast" id="toast"></div>
@@ -731,11 +876,23 @@
   const breakerSizes = [6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100];
   // Capacidades comerciales de protección diferencial (A)
   const diffSizes = [25, 40, 63, 100];
+  // Factores de demanda referenciales por tipo de circuito (RIC N°03 / NCh Elec. 4/2003)
+  const circuitTypes = {
+    alumbrado:     { label: 'Alumbrado',                    factor: 1.00 },
+    enchufes:      { label: 'Enchufes (tomacorrientes)',    factor: 0.75 },
+    cocina_termo:  { label: 'Cocina / Termo eléctrico',     factor: 0.70 },
+    climatizacion: { label: 'Climatización',                factor: 0.65 },
+    fuerza_motriz: { label: 'Fuerza motriz / especiales',   factor: 0.80 },
+    otro:          { label: 'Otro',                         factor: 0.80 }
+  };
+  const LEGAL_TEXT = 'Aviso Legal: Esta herramienta es una guía de cálculo referencial de apoyo para el diseño de instalaciones eléctricas domiciliarias. Los proyectos y ejecuciones definitivas deben ser verificados y firmados por un Instalador Eléctrico Autorizado por la SEC (Superintendencia de Electricidad y Combustibles) conforme a la normativa vigente.';
 
   const RHO = 1 / 56; // resistividad del cobre, Ω·mm²/m (conductividad 56 m/Ω·mm²)
 
   let voltage = 220;
   let isThreePhase = false;
+  let tablero = [];
+  let circuitSeq = 1;
 
   function setVoltage(v){
     voltage = v;
@@ -767,6 +924,17 @@
 
   function recommendedInsulation(installType){
     return installType === 'tuberia' ? 'NYA' : 'RZ1-K';
+  }
+
+  // Encuentra el calibre mínimo cuya Iz (con el aislamiento/canalización/temperatura
+  // dados) alcanza o supera una corriente objetivo (típicamente In). Usada tanto para
+  // la solución exacta del circuito individual como para el alimentador del tablero.
+  function findSolutionGauge(targetIn, insulation, totalFactor){
+    for (const g of gaugeList){
+      const iz = baseAmpacity[String(g)] * insulationFactor[insulation] * totalFactor;
+      if (iz >= targetIn) return { gauge: g, iz };
+    }
+    return { gauge: null, iz: null };
   }
 
   function calc(){
@@ -854,7 +1022,7 @@
       status.className = 'status bad';
       status.textContent = 'Protección no coordinada';
       detail.textContent = !cond2
-        ? 'El disyuntor de ' + inBreaker + ' A supera la ampacidad corregida del conductor (Iz = ' + fmt(iz,1) + ' A). Aumenta la sección, cambia la canalización o baja el calibre del disyuntor.'
+        ? 'El disyuntor de ' + inBreaker + ' A supera la ampacidad corregida del conductor (Iz = ' + fmt(iz,1) + ' A). Revisa el bloque de recomendaciones para la solución exacta.'
         : 'La corriente de servicio supera al disyuntor sugerido. Revisa la carga o el cálculo de Ib.';
     }
 
@@ -906,33 +1074,41 @@
     document.getElementById('rPe2').textContent = pe + ' mm²';
     document.getElementById('rDiff2').textContent = diffRating + ' A' + (diffOk ? ' ✓' : ' ⚠');
 
-    // ================= Diagnóstico normativo =================
+    // ================= Diagnóstico normativo con solución exacta =================
     const issues = [];
     if (!dropOk){
       issues.push({
         title: 'Caída de tensión sobre el límite permitido',
-        text: 'La caída calculada (' + fmt(dvPercent,2) + '%) supera el 3% máximo admitido. Aumenta la sección del conductor, acorta el tramo o redistribuye la carga.',
+        text: 'La caída calculada (' + fmt(dvPercent,2) + '%) supera el 3% máximo admitido.',
+        solution: 'Solución recomendada: aumenta la sección del conductor, acorta el tramo o redistribuye la carga hasta que ΔV baje de 3%.',
         ric: 'RIC N°03'
       });
     }
     if (!cond2){
+      const sol = findSolutionGauge(inBreaker, insulation, totalFactor);
+      const solTxt = sol.gauge
+        ? 'Solución recomendada: utilizar un Disyuntor de ' + inBreaker + ' A combinado con un Conductor de ' + sol.gauge + ' mm² (Iz = ' + fmt(sol.iz,1) + ' A) para cubrir la corriente de servicio de ' + fmt(ib,2) + ' A.'
+        : 'Ningún calibre disponible en esta calculadora (hasta 16 mm²) alcanza a cubrir el disyuntor de ' + inBreaker + ' A con el aislamiento y canalización actuales. Evalúa una sección mayor, aislamiento RZ1-K, u otro método de instalación.';
       issues.push({
         title: 'El disyuntor supera la ampacidad del conductor',
-        text: 'In (' + inBreaker + ' A) es mayor que Iz corregida (' + fmt(iz,1) + ' A). El conductor no queda protegido térmicamente ante sobrecarga: sube la sección, mejora la canalización o baja el calibre del disyuntor.',
-        ric: 'RIC N°04'
+        text: 'In (' + inBreaker + ' A) es mayor que Iz corregida (' + fmt(iz,1) + ' A) del conductor de ' + gauge + ' mm² con el aislamiento y canalización seleccionados.',
+        solution: solTxt,
+        ric: 'RIC N°04 y RIC N°05'
       });
     }
     if (!cond1){
       issues.push({
         title: 'El disyuntor no cubre la corriente de servicio',
-        text: 'Ib (' + fmt(ib,2) + ' A) supera a In (' + inBreaker + ' A) sugerido. Revisa la carga declarada o selecciona un disyuntor de mayor capacidad, siempre que Iz lo permita.',
+        text: 'Ib (' + fmt(ib,2) + ' A) supera a In (' + inBreaker + ' A) sugerido.',
+        solution: 'Solución recomendada: revisa la carga declarada o selecciona un disyuntor de mayor capacidad, siempre que Iz lo permita.',
         ric: 'RIC N°05'
       });
     }
     if (!diffOk){
       issues.push({
         title: 'Protección diferencial subdimensionada',
-        text: 'El In_diff seleccionado (' + diffRating + ' A) es menor que el disyuntor magnetotérmico aguas arriba (' + inBreaker + ' A). Selecciona un diferencial de 30 mA con capacidad igual o superior.',
+        text: 'El In_diff seleccionado (' + diffRating + ' A) es menor que el disyuntor magnetotérmico aguas arriba (' + inBreaker + ' A).',
+        solution: 'Solución recomendada: selecciona un diferencial de 30 mA de ' + nextFromList(inBreaker, diffSizes) + ' A o más.',
         ric: 'RIC N°05'
       });
     }
@@ -945,6 +1121,9 @@
       ib, iz, inBreaker, protectionOk, dvPercent, dvVolts, vFinal,
       diffRating, diffOk, awg, pe, recomIns, issues
     };
+
+    // El tablero depende de tensión / cos φ / aislamiento / canalización generales
+    renderTablero();
   }
 
   function installTypeLabel(t){
@@ -961,8 +1140,86 @@
     }
     panel.classList.add('show');
     list.innerHTML = issues.map(it =>
-      '<div class="diag-item"><div class="diag-dot"></div><div class="diag-body"><strong>' + it.title + '</strong><p>' + it.text + '</p></div><div class="ric-badge">' + it.ric + '</div></div>'
+      '<div class="diag-item"><div class="diag-dot"></div><div class="diag-body"><strong>' + it.title + '</strong><p>' + it.text + '</p><div class="solution"><b>✓</b> ' + it.solution + '</div></div><div class="ric-badge">' + it.ric + '</div></div>'
     ).join('');
+  }
+
+  // ---------------- Tablero de cargas ----------------
+  function addCircuit(){
+    const type = document.getElementById('circuitType').value;
+    const power = parseFloat(document.getElementById('circuitPower').value) || 0;
+    if (power <= 0){ showToast('Ingresa una potencia válida'); return; }
+    tablero.push({
+      id: circuitSeq,
+      label: 'C' + circuitSeq + ' — ' + circuitTypes[type].label,
+      type, power
+    });
+    circuitSeq++;
+    document.getElementById('circuitPower').value = '';
+    renderTablero();
+  }
+
+  function removeCircuit(id){
+    tablero = tablero.filter(c => c.id !== id);
+    renderTablero();
+  }
+
+  function renderTablero(){
+    const body = document.getElementById('tableroBody');
+    const table = document.getElementById('tableroTable');
+    const empty = document.getElementById('tableroEmpty');
+    const totals = document.getElementById('tableroTotals');
+
+    if (tablero.length === 0){
+      table.style.display = 'none';
+      empty.style.display = 'block';
+      totals.style.display = 'none';
+      window.__tableroSummary = null;
+      return;
+    }
+    empty.style.display = 'none';
+    table.style.display = 'table';
+    totals.style.display = 'grid';
+
+    let instaladaKW = 0, demandadaKW = 0;
+    body.innerHTML = tablero.map(c => {
+      const f = circuitTypes[c.type].factor;
+      const demanded = c.power * f;
+      instaladaKW += c.power;
+      demandadaKW += demanded;
+      return '<tr><td>' + c.label + '</td><td>' + circuitTypes[c.type].label + '</td>' +
+        '<td class="num">' + c.power.toFixed(2) + ' kW</td>' +
+        '<td class="num">' + Math.round(f * 100) + '%</td>' +
+        '<td class="num">' + demanded.toFixed(2) + ' kW</td>' +
+        '<td><button type="button" class="remove-btn" onclick="removeCircuit(' + c.id + ')" aria-label="Eliminar circuito">✕</button></td></tr>';
+    }).join('');
+
+    let pf = parseFloat(document.getElementById('pf').value); if (!pf || pf <= 0) pf = 0.9; if (pf > 1) pf = 1;
+    const instaladaA = isThreePhase ? (instaladaKW * 1000) / (Math.sqrt(3) * voltage * pf) : (instaladaKW * 1000) / (voltage * pf);
+    const demandadaA = isThreePhase ? (demandadaKW * 1000) / (Math.sqrt(3) * voltage * pf) : (demandadaKW * 1000) / (voltage * pf);
+
+    const generalBreaker = nextFromList(demandadaA, breakerSizes);
+
+    const insulation = document.getElementById('insulation').value;
+    const installType = document.getElementById('installType').value;
+    const ambientTemp = document.getElementById('ambientTemp').value;
+    const totalFactor = installFactor[installType] * tempFactor[ambientTemp];
+    const feederSolution = findSolutionGauge(generalBreaker, insulation, totalFactor);
+
+    const diffGeneral = nextFromList(generalBreaker, diffSizes);
+
+    document.getElementById('totInstalada').textContent = instaladaKW.toFixed(2) + ' kW · ' + fmt(instaladaA) + ' A';
+    document.getElementById('totDemandada').textContent = demandadaKW.toFixed(2) + ' kW · ' + fmt(demandadaA) + ' A';
+    document.getElementById('totBreaker').textContent = generalBreaker + ' A';
+    document.getElementById('totFeeder').textContent = feederSolution.gauge
+      ? feederSolution.gauge + ' mm² (Iz=' + fmt(feederSolution.iz,1) + ' A)'
+      : 'Fuera de rango (>16 mm²)';
+    document.getElementById('totDiff').textContent = diffGeneral + ' A · 300 mA con selectividad (si cada circuito ya tiene diferencial de 30 mA), o 30 mA si es vivienda unifamiliar simple';
+
+    window.__tableroSummary = {
+      circuits: tablero.map(c => ({ label: c.label, type: circuitTypes[c.type].label, power: c.power, factor: circuitTypes[c.type].factor, demanded: c.power * circuitTypes[c.type].factor })),
+      instaladaKW, demandadaKW, instaladaA, demandadaA, generalBreaker, feederSolution, diffGeneral
+    };
   }
 
   function buildSummaryText(){
@@ -991,9 +1248,22 @@
       'Tierra de protección (PE) mínima: ' + c.pe + ' mm²',
       'Aislamiento recomendado según canalización: ' + c.recomIns,
       '',
-      c.issues.length ? 'RECOMENDACIONES:' : 'Sin no conformidades detectadas.',
-      ...c.issues.map(it => '- [' + it.ric + '] ' + it.title + ': ' + it.text)
+      c.issues.length ? 'RECOMENDACIONES:' : 'Sin no conformidades detectadas en el circuito.',
+      ...c.issues.map(it => '- [' + it.ric + '] ' + it.title + '. ' + it.solution)
     ];
+    if (window.__tableroSummary){
+      const t = window.__tableroSummary;
+      lines.push('', 'TABLERO DE CARGAS', '------------------------------');
+      t.circuits.forEach(cc => lines.push('- ' + cc.label + ': ' + cc.power.toFixed(2) + ' kW × ' + Math.round(cc.factor*100) + '% = ' + cc.demanded.toFixed(2) + ' kW'));
+      lines.push(
+        'Carga total instalada: ' + t.instaladaKW.toFixed(2) + ' kW / ' + fmt(t.instaladaA) + ' A',
+        'Carga máxima demandada: ' + t.demandadaKW.toFixed(2) + ' kW / ' + fmt(t.demandadaA) + ' A',
+        'Disyuntor general sugerido: ' + t.generalBreaker + ' A',
+        'Alimentador general mínimo: ' + (t.feederSolution.gauge ? t.feederSolution.gauge + ' mm² (Iz=' + fmt(t.feederSolution.iz,1) + ' A)' : 'fuera de rango'),
+        'Diferencial general sugerido: ' + t.diffGeneral + ' A'
+      );
+    }
+    lines.push('', LEGAL_TEXT);
     return lines.join('\n');
   }
 
@@ -1049,6 +1319,7 @@
     doc.setTextColor(30, 30, 30);
 
     function sectionTitle(txt){
+      if (y > 270){ doc.addPage(); y = 16; }
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11.5);
       doc.setTextColor(30, 30, 30);
@@ -1061,13 +1332,13 @@
     function dataRow(label, value){
       if (y > 280){ doc.addPage(); y = 16; }
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
+      doc.setFontSize(9.5);
       doc.setTextColor(90, 90, 90);
       doc.text(label, marginX, y);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(25, 25, 25);
       doc.text(String(value), pageW - marginX, y, { align: 'right' });
-      y += 6.3;
+      y += 6.2;
     }
 
     function statusBar(label, ok){
@@ -1082,7 +1353,7 @@
       y += barH + 4;
     }
 
-    // ---- Datos de entrada ----
+    // ---- 1. Datos de entrada ----
     sectionTitle('1. Datos de entrada');
     dataRow('Tensión de suministro', c.voltage + ' V ' + (c.isThreePhase ? 'trifásico' : 'monofásico'));
     dataRow('Carga del circuito', c.loadLabel);
@@ -1092,7 +1363,7 @@
     dataRow('Canalización / temperatura ambiente', installTypeLabel(c.installType) + ' · ' + c.ambientTemp + ' °C');
     y += 2;
 
-    // ---- Resultados calculados ----
+    // ---- 2. Resultados calculados ----
     sectionTitle('2. Resultados calculados');
     dataRow('Corriente de servicio (Ib)', fmt(c.ib) + ' A');
     dataRow('Ampacidad admisible corregida (Iz)', fmt(c.iz, 1) + ' A  (base ' + fmt(c.izBase,1) + ' A × ' + c.totalFactor.toFixed(2) + ')');
@@ -1103,14 +1374,14 @@
     dataRow('Tierra de protección (PE) mínima', c.pe + ' mm²');
     y += 2;
 
-    // ---- Diagnóstico de protecciones ----
+    // ---- 3. Diagnóstico de protecciones ----
     sectionTitle('3. Diagnóstico de protecciones');
     statusBar('Coordinación Ib ≤ In ≤ Iz', c.protectionOk);
     statusBar('Caída de tensión ≤ 3% (RIC N°03)', c.dvPercent <= 3);
     statusBar('Protección diferencial In_diff ≥ In (RIC N°05)', c.diffOk);
     y += 2;
 
-    // ---- Recomendaciones ----
+    // ---- 4. Recomendaciones y solución técnica exacta ----
     sectionTitle('4. Recomendaciones técnicas y base normativa');
     if (c.issues.length === 0){
       doc.setFont('helvetica', 'normal');
@@ -1120,20 +1391,48 @@
       y += 7;
     } else {
       c.issues.forEach(it => {
-        if (y > 265){ doc.addPage(); y = 16; }
+        if (y > 258){ doc.addPage(); y = 16; }
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(150, 40, 25);
         doc.text('• ' + it.title + '  [' + it.ric + ']', marginX, y);
         y += 5;
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.3);
+        doc.setFontSize(9.2);
         doc.setTextColor(70, 70, 70);
-        const wrapped = doc.splitTextToSize(it.text, pageW - marginX * 2 - 4);
-        doc.text(wrapped, marginX + 4, y);
-        y += wrapped.length * 4.6 + 4;
+        const wrappedText = doc.splitTextToSize(it.text, pageW - marginX * 2 - 4);
+        doc.text(wrappedText, marginX + 4, y);
+        y += wrappedText.length * 4.5 + 2;
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setTextColor(20, 110, 60);
+        const wrappedSol = doc.splitTextToSize(it.solution, pageW - marginX * 2 - 4);
+        doc.text(wrappedSol, marginX + 4, y);
+        y += wrappedSol.length * 4.5 + 5;
       });
     }
+
+    // ---- 5. Tablero de cargas (si existe) ----
+    if (window.__tableroSummary){
+      const t = window.__tableroSummary;
+      sectionTitle('5. Tablero de cargas — resumen');
+      t.circuits.forEach(cc => dataRow(cc.label, cc.power.toFixed(2) + ' kW × ' + Math.round(cc.factor*100) + '% = ' + cc.demanded.toFixed(2) + ' kW'));
+      dataRow('Carga total instalada', t.instaladaKW.toFixed(2) + ' kW / ' + fmt(t.instaladaA) + ' A');
+      dataRow('Carga máxima demandada', t.demandadaKW.toFixed(2) + ' kW / ' + fmt(t.demandadaA) + ' A');
+      dataRow('Disyuntor general sugerido', t.generalBreaker + ' A');
+      dataRow('Alimentador general mínimo', t.feederSolution.gauge ? t.feederSolution.gauge + ' mm² (Iz=' + fmt(t.feederSolution.iz,1) + ' A)' : 'Fuera de rango (>16 mm²)');
+      dataRow('Diferencial general sugerido', t.diffGeneral + ' A');
+      y += 2;
+    }
+
+    // ---- 6. Aviso legal ----
+    sectionTitle((window.__tableroSummary ? '6' : '5') + '. Aviso legal');
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.8);
+    doc.setTextColor(80, 80, 80);
+    const wrappedLegal = doc.splitTextToSize(LEGAL_TEXT, pageW - marginX * 2);
+    if (y + wrappedLegal.length * 4.4 > 285){ doc.addPage(); y = 16; }
+    doc.text(wrappedLegal, marginX, y);
+    y += wrappedLegal.length * 4.4 + 4;
 
     // ---- Pie de página ----
     const pageCount = doc.internal.getNumberOfPages();
