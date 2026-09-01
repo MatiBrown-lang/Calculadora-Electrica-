@@ -99,33 +99,23 @@
     outline-offset: 2px;
   }
 
-  /* ---------- Layout ---------- */
+  /* ---------- Layout ----------
+     Maquetado de una sola columna: <main> es un contenedor de flujo normal
+     (no grid, no flex-row, no floats). Cada panel es un bloque estático que
+     ocupa el 100% del ancho disponible y se apila verticalmente en el orden
+     natural del documento: Datos de entrada → Resumen del circuito →
+     Diagnóstico/recomendaciones → Tablero de cargas. Nada cambia de
+     posición ni se superpone a nada más al hacer scroll. */
   main{
-    max-width: 1120px;
+    max-width: 760px;
     margin: 0 auto;
     padding: 22px 20px 0;
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 20px;
-    align-items: start;
+    display: block;
   }
-  @media (max-width: 900px){
-    main{ grid-template-columns: 1fr; }
-  }
-  /* Columna izquierda: agrupa datos de entrada, diagnóstico y tablero en un
-     único flujo de bloques normales (sin grid interno), así nunca compiten
-     por posición con la barra lateral. */
-  .main-content{
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    min-width: 0;
-  }
-  /* Columna derecha: únicamente el resumen del circuito. Elemento de flujo
-     normal y estático — nada de sticky/absolute/fixed — así jamás se monta
-     sobre el contenido de abajo. */
-  .results-sidebar{
-    min-width: 0;
+  main > *{
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 18px;
   }
 
   .panel{
@@ -228,8 +218,12 @@
   fieldset legend{ padding:0; margin-bottom: 14px; font-size: 12.5px; color: var(--text-dim); }
 
   /* ---------- Results panel ---------- */
+  /* Bloque estático normal: sin sticky/fixed/absolute/float, 100% del ancho
+     del contenedor principal, centrado como cualquier otro panel del flujo. */
   .results{
     width: 100%;
+    max-width: 100%;
+    margin: 0 auto 18px;
     position: static;
   }
 
@@ -413,7 +407,7 @@
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
 
   footer{
-    max-width: 1120px;
+    max-width: 760px;
     margin: 26px auto 0;
     padding: 0 20px;
     color: var(--text-dim);
@@ -607,10 +601,7 @@
 </header>
 
 <main>
-  <!-- ================= COLUMNA IZQUIERDA ================= -->
-  <div class="main-content">
-
-  <!-- ================= INPUT PANEL ================= -->
+  <!-- ================= 1. INPUT PANEL: Datos de entrada ================= -->
   <section class="panel form-panel" aria-label="Datos del circuito">
 
     <h2><span class="idx">1</span>Datos de entrada</h2>
@@ -759,13 +750,40 @@
 
   </section>
 
-  <!-- ================= DIAGNÓSTICO NORMATIVO ================= -->
+  <!-- ================= 2. RESUMEN DEL CIRCUITO ================= -->
+  <aside class="panel results" aria-label="Resumen de resultados">
+    <h2><span class="idx">Σ</span>Resumen del circuito</h2>
+
+    <div class="readout">
+      <div class="label">Corriente de servicio</div>
+      <div class="value" id="ibBig">0.00<small>A</small></div>
+    </div>
+
+    <div class="row"><span class="k">Tensión de servicio</span><span class="v" id="rVoltage">220 V mono.</span></div>
+    <div class="row"><span class="k">Carga</span><span class="v" id="rLoad">–</span></div>
+    <div class="row"><span class="k">Conductor</span><span class="v" id="rGauge">–</span></div>
+    <div class="row"><span class="k">Canalización / temp.</span><span class="v" id="rInstall">–</span></div>
+    <div class="row"><span class="k">Iz corregida</span><span class="v" id="rIz">–</span></div>
+    <div class="row"><span class="k">Disyuntor sugerido (In)</span><span class="v" id="rBreaker">–</span></div>
+    <div class="row"><span class="k">Caída de tensión</span><span class="v" id="rDrop">–</span></div>
+    <hr class="section-divider">
+    <div class="row"><span class="k">AWG equivalente</span><span class="v" id="rAwg2">–</span></div>
+    <div class="row"><span class="k">PE mínimo</span><span class="v" id="rPe2">–</span></div>
+    <div class="row"><span class="k">Diferencial (30 mA)</span><span class="v" id="rDiff2">–</span></div>
+
+    <div class="actions">
+      <button class="btn" onclick="copySummary()">📋 Copiar resumen</button>
+      <button class="btn primary" onclick="exportPDF()">📄 Exportar Ficha PDF</button>
+    </div>
+  </aside>
+
+  <!-- ================= 3. DIAGNÓSTICO NORMATIVO ================= -->
   <section class="panel diag-panel" id="diagPanel" aria-label="Diagnóstico y recomendaciones técnicas">
     <h2><span class="idx">!</span>Recomendaciones técnicas y base normativa</h2>
     <div id="diagList"></div>
   </section>
 
-  <!-- ================= TABLERO DE CARGAS ================= -->
+  <!-- ================= 4. TABLERO DE CARGAS ================= -->
   <section class="panel tablero-panel" aria-label="Tablero de cargas">
     <h2><span class="idx">T</span>Tablero de cargas — suma y alimentador general</h2>
 
@@ -813,37 +831,9 @@
 
     <p class="factor-note">Factores de demanda referenciales por tipo de circuito (ajustables a la tabla de tu curso o del pliego RIC N°03 / NCh Elec. 4/2003 aplicable). Cada circuito se calcula como potencia instalada × su propio factor de demanda; la suma resultante es la carga máxima demandada estimada del tablero. El alimentador y disyuntor general usan la tensión, cos φ, aislamiento y canalización configurados arriba.</p>
   </section>
-
-  </div><!-- /.main-content -->
-
-  <!-- ================= COLUMNA DERECHA: RESUMEN ================= -->
-  <aside class="panel results results-sidebar" aria-label="Resumen de resultados">
-    <h2><span class="idx">Σ</span>Resumen del circuito</h2>
-
-    <div class="readout">
-      <div class="label">Corriente de servicio</div>
-      <div class="value" id="ibBig">0.00<small>A</small></div>
-    </div>
-
-    <div class="row"><span class="k">Tensión de servicio</span><span class="v" id="rVoltage">220 V mono.</span></div>
-    <div class="row"><span class="k">Carga</span><span class="v" id="rLoad">–</span></div>
-    <div class="row"><span class="k">Conductor</span><span class="v" id="rGauge">–</span></div>
-    <div class="row"><span class="k">Canalización / temp.</span><span class="v" id="rInstall">–</span></div>
-    <div class="row"><span class="k">Iz corregida</span><span class="v" id="rIz">–</span></div>
-    <div class="row"><span class="k">Disyuntor sugerido (In)</span><span class="v" id="rBreaker">–</span></div>
-    <div class="row"><span class="k">Caída de tensión</span><span class="v" id="rDrop">–</span></div>
-    <hr class="section-divider">
-    <div class="row"><span class="k">AWG equivalente</span><span class="v" id="rAwg2">–</span></div>
-    <div class="row"><span class="k">PE mínimo</span><span class="v" id="rPe2">–</span></div>
-    <div class="row"><span class="k">Diferencial (30 mA)</span><span class="v" id="rDiff2">–</span></div>
-
-    <div class="actions">
-      <button class="btn" onclick="copySummary()">📋 Copiar resumen</button>
-      <button class="btn primary" onclick="exportPDF()">📄 Exportar Ficha PDF</button>
-    </div>
-  </aside>
 </main>
 
+<!-- ================= 5. PIE DE PÁGINA Y AVISO LEGAL SEC ================= -->
 <footer>
   <p>Cálculos referenciales para apoyo en terreno según criterios usuales de RIC / NCh Elec. 4/2003 (ampacidad método B1, resistividad Cu ≈ 1/56 Ω·mm²/m). Verifica siempre contra la norma vigente, la tabla de tu pliego RIC y el criterio del proyectista responsable.</p>
   <div class="legal-box">
