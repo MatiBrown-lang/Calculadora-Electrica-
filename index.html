@@ -100,22 +100,34 @@
   }
 
   /* ---------- Layout ----------
-     Maquetado de una sola columna: <main> es un contenedor de flujo normal
-     (no grid, no flex-row, no floats). Cada panel es un bloque estático que
-     ocupa el 100% del ancho disponible y se apila verticalmente en el orden
-     natural del documento: Datos de entrada → Resumen del circuito →
-     Diagnóstico/recomendaciones → Tablero de cargas. Nada cambia de
-     posición ni se superpone a nada más al hacer scroll. */
+     .top-section es el ÚNICO contenedor de 2 columnas: agrupa solo el panel
+     de "Datos de entrada" y el <aside> de "Resumen del circuito". En
+     escritorio usa CSS Grid de 2 columnas (1fr 380px); en pantallas
+     ≤900px pasa a 1 columna apilada. El resto de los módulos
+     (Recomendaciones, Tablero de cargas, Aviso legal) vive FUERA de
+     .top-section, como bloques normales a ancho completo, por lo que
+     nunca pueden quedar tapados por la tarjeta de resumen. */
   main{
-    max-width: 760px;
+    max-width: 1120px;
     margin: 0 auto;
     padding: 22px 20px 0;
     display: block;
   }
-  main > *{
-    width: 100%;
-    max-width: 100%;
+  main > .top-section,
+  main > .panel{
     margin: 0 0 18px;
+  }
+
+  .top-section{
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    align-items: start;
+    gap: 20px;
+  }
+  @media (max-width: 900px){
+    .top-section{
+      grid-template-columns: 1fr;
+    }
   }
 
   .panel{
@@ -218,12 +230,10 @@
   fieldset legend{ padding:0; margin-bottom: 14px; font-size: 12.5px; color: var(--text-dim); }
 
   /* ---------- Results panel ---------- */
-  /* Bloque estático normal: sin sticky/fixed/absolute/float, 100% del ancho
-     del contenedor principal, centrado como cualquier otro panel del flujo. */
+  /* Sin sticky/fixed/absolute: es una celda normal de .top-section, con
+     'position: static' explícito. Nunca se monta sobre lo que viene después
+     porque .top-section termina justo aquí; todo lo demás está fuera de él. */
   .results{
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto 18px;
     position: static;
   }
 
@@ -601,6 +611,7 @@
 </header>
 
 <main>
+<div class="top-section">
   <!-- ================= 1. INPUT PANEL: Datos de entrada ================= -->
   <section class="panel form-panel" aria-label="Datos del circuito">
 
@@ -776,6 +787,8 @@
       <button class="btn primary" onclick="exportPDF()">📄 Exportar Ficha PDF</button>
     </div>
   </aside>
+</div>
+<!-- ==== fin de .top-section: todo lo que sigue va a ancho completo ==== -->
 
   <!-- ================= 3. DIAGNÓSTICO NORMATIVO ================= -->
   <section class="panel diag-panel" id="diagPanel" aria-label="Diagnóstico y recomendaciones técnicas">
