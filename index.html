@@ -106,14 +106,31 @@
     padding: 22px 20px 0;
     display: grid;
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "form"
+      "summary"
+      "diag"
+      "tablero";
+    align-items: start;
     gap: 18px;
   }
   @media (min-width: 900px){
     main{
       grid-template-columns: 1fr 380px;
-      align-items: start;
+      grid-template-areas:
+        "form summary"
+        "diag diag"
+        "tablero tablero";
+      gap: 22px 24px;
     }
   }
+  /* Cada bloque se ancla explícitamente a su área del grid: así el panel
+     de resumen queda contenido en su propia columna y jamás se superpone
+     a las secciones full-span de abajo (diagnóstico / tablero / footer). */
+  .form-panel{ grid-area: form; min-width: 0; }
+  .results{ grid-area: summary; min-width: 0; }
+  #diagPanel{ grid-area: diag; }
+  .tablero-panel{ grid-area: tablero; }
   .full-span{ grid-column: 1 / -1; }
 
   .panel{
@@ -218,9 +235,19 @@
   /* ---------- Results panel ---------- */
   .results{
     position: static;
+    align-self: start;
+    height: fit-content;
   }
   @media (min-width: 900px){
-    .results{ position: sticky; top: 74px; }
+    .results{
+      position: sticky;
+      top: 74px;
+      /* Se limita a la altura visible de la ventana y gana scroll propio si
+         el contenido es más alto, de modo que nunca crece por encima de las
+         secciones full-span que vienen después en el grid. */
+      max-height: calc(100vh - 94px);
+      overflow-y: auto;
+    }
   }
 
   .readout{
@@ -591,7 +618,7 @@
 
 <main>
   <!-- ================= INPUT PANEL ================= -->
-  <section class="panel" aria-label="Datos del circuito">
+  <section class="panel form-panel" aria-label="Datos del circuito">
 
     <h2><span class="idx">1</span>Datos de entrada</h2>
 
@@ -641,9 +668,11 @@
       <div class="field">
         <label>Aislamiento del cable</label>
         <select id="insulation" onchange="calc()">
-          <option value="NYA">NYA (PVC 70°C)</option>
-          <option value="EVA">EVA (Goma, uso flexible)</option>
-          <option value="RZ1-K">RZ1-K (XLPE 90°C, LSOH)</option>
+          <option value="NYA">NYA / H07V-U (PVC 70°C — tendido fijo embutido)</option>
+          <option value="EVA">EVA / H07Z1-K (LSOH 70°C — locales de reunión de personas)</option>
+          <option value="RZ1-K">RZ1-K (LSOH 90°C — alimentadores y fuerza)</option>
+          <option value="THHN">THHN / THWN-2 (PVC/Nylon 90°C — alta temperatura)</option>
+          <option value="RV-K">RV-K (XLPE 90°C — subterráneo / intemperie)</option>
         </select>
       </div>
     </div>
@@ -771,7 +800,7 @@
   </section>
 
   <!-- ================= TABLERO DE CARGAS ================= -->
-  <section class="panel full-span" aria-label="Tablero de cargas">
+  <section class="panel full-span tablero-panel" aria-label="Tablero de cargas">
     <h2><span class="idx">T</span>Tablero de cargas — suma y alimentador general</h2>
 
     <div class="add-circuit-row">
@@ -842,11 +871,21 @@
     "10":  50,
     "16":  68
   };
-  // Factor de corrección por tipo de aislamiento respecto de la base NYA/PVC
+  // Factor de corrección por tipo de aislamiento respecto de la base NYA/PVC (RIC N°04)
   const insulationFactor = {
-    "NYA":   1.00,
-    "EVA":   0.85,
-    "RZ1-K": 1.15
+    "NYA":   1.00,  // H07V-U, PVC 70°C, tendido fijo embutido
+    "EVA":   0.85,  // H07Z1-K, LSOH 70°C, locales de reunión de personas
+    "RZ1-K": 1.15,  // LSOH 90°C, alimentadores y fuerza
+    "THHN":  1.15,  // THWN-2, PVC/Nylon 90°C, alta temperatura
+    "RV-K":  1.15   // XLPE 90°C, subterráneo / intemperie
+  };
+  // Etiqueta técnica completa por tipo de aislamiento (para resúmenes y PDF)
+  const insulationLabel = {
+    "NYA":   "NYA / H07V-U (PVC 70°C)",
+    "EVA":   "EVA / H07Z1-K (LSOH 70°C)",
+    "RZ1-K": "RZ1-K (LSOH 90°C)",
+    "THHN":  "THHN / THWN-2 (90°C)",
+    "RV-K":  "RV-K (XLPE 90°C)"
   };
   // Factor de corrección por tipo de canalización (RIC N°04)
   const installFactor = {
@@ -923,7 +962,9 @@
   }
 
   function recommendedInsulation(installType){
-    return installType === 'tuberia' ? 'NYA' : 'RZ1-K';
+    if (installType === 'subterranea') return 'RV-K';   // XLPE 90°C, uso subterráneo/intemperie
+    if (installType === 'bandeja') return 'RZ1-K';       // LSOH 90°C, alimentadores y fuerza
+    return 'NYA';                                        // tendido fijo embutido en tubería
   }
 
   // Encuentra el calibre mínimo cuya Iz (con el aislamiento/canalización/temperatura
@@ -1056,7 +1097,7 @@
       diffAlert.innerHTML = '<span>⚠</span><span><b>Diferencial subdimensionado.</b> Selecciona un In_diff igual o superior a ' + inBreaker + ' A.</span>';
     }
 
-    document.getElementById('rRecomIns').textContent = recomIns + (insulation !== recomIns ? '  (seleccionaste ' + insulation + ')' : '  (coincide con tu selección)');
+    document.getElementById('rRecomIns').textContent = insulationLabel[recomIns] + (insulation !== recomIns ? '  (seleccionaste ' + insulationLabel[insulation] + ')' : '  (coincide con tu selección)');
     document.getElementById('rAwg').textContent = awg + ' ~ ' + gauge + ' mm²';
     document.getElementById('rPe').textContent = pe + ' mm²';
 
@@ -1065,7 +1106,7 @@
     document.getElementById('rVoltage').textContent = voltage + ' V ' + (isThreePhase ? 'trifásico' : 'monofásico');
     const loadLabel = loadUnit === 'A' ? fmt(loadValueRaw, 1) + ' A' : fmt(loadValueRaw, loadUnit==='kW'?2:0) + ' ' + loadUnit;
     document.getElementById('rLoad').textContent = loadLabel;
-    document.getElementById('rGauge').textContent = gauge + ' mm² · ' + insulation;
+    document.getElementById('rGauge').textContent = gauge + ' mm² · ' + insulationLabel[insulation];
     document.getElementById('rInstall').textContent = installTypeLabel(installType) + ' · ' + ambientTemp + '°C';
     document.getElementById('rIz').textContent = fmt(iz, 1) + ' A';
     document.getElementById('rBreaker').textContent = inBreaker + ' A';
@@ -1232,7 +1273,7 @@
       'Carga: ' + c.loadLabel,
       'Longitud del tramo: ' + c.length + ' m',
       'Factor de potencia (cos φ): ' + c.pf,
-      'Conductor: ' + c.gauge + ' mm² · ' + c.insulation + ' (' + c.awg + ')',
+      'Conductor: ' + c.gauge + ' mm² · ' + insulationLabel[c.insulation] + ' (' + c.awg + ')',
       'Canalización: ' + installTypeLabel(c.installType) + ' · ' + c.ambientTemp + '°C',
       '',
       'Corriente de servicio (Ib): ' + fmt(c.ib) + ' A',
@@ -1246,7 +1287,7 @@
       '',
       'Protección diferencial: ' + c.diffRating + ' A, sensibilidad 30 mA — ' + (c.diffOk ? 'CUMPLE' : 'NO CUMPLE'),
       'Tierra de protección (PE) mínima: ' + c.pe + ' mm²',
-      'Aislamiento recomendado según canalización: ' + c.recomIns,
+      'Aislamiento recomendado según canalización: ' + insulationLabel[c.recomIns],
       '',
       c.issues.length ? 'RECOMENDACIONES:' : 'Sin no conformidades detectadas en el circuito.',
       ...c.issues.map(it => '- [' + it.ric + '] ' + it.title + '. ' + it.solution)
@@ -1359,7 +1400,7 @@
     dataRow('Carga del circuito', c.loadLabel);
     dataRow('Longitud del tramo', c.length + ' m');
     dataRow('Factor de potencia (cos φ)', c.pf);
-    dataRow('Conductor', c.gauge + ' mm² · ' + c.insulation + '  (' + c.awg + ')');
+    dataRow('Conductor', c.gauge + ' mm² · ' + insulationLabel[c.insulation] + '  (' + c.awg + ')');
     dataRow('Canalización / temperatura ambiente', installTypeLabel(c.installType) + ' · ' + c.ambientTemp + ' °C');
     y += 2;
 
