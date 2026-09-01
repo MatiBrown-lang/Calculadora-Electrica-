@@ -105,33 +105,28 @@
     margin: 0 auto;
     padding: 22px 20px 0;
     display: grid;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "form"
-      "summary"
-      "diag"
-      "tablero";
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
     align-items: start;
+  }
+  @media (max-width: 900px){
+    main{ grid-template-columns: 1fr; }
+  }
+  /* Columna izquierda: agrupa datos de entrada, diagnóstico y tablero en un
+     único flujo de bloques normales (sin grid interno), así nunca compiten
+     por posición con la barra lateral. */
+  .main-content{
+    display: flex;
+    flex-direction: column;
     gap: 18px;
+    min-width: 0;
   }
-  @media (min-width: 900px){
-    main{
-      grid-template-columns: 1fr 380px;
-      grid-template-areas:
-        "form summary"
-        "diag diag"
-        "tablero tablero";
-      gap: 22px 24px;
-    }
+  /* Columna derecha: únicamente el resumen del circuito. Elemento de flujo
+     normal y estático — nada de sticky/absolute/fixed — así jamás se monta
+     sobre el contenido de abajo. */
+  .results-sidebar{
+    min-width: 0;
   }
-  /* Cada bloque se ancla explícitamente a su área del grid: así el panel
-     de resumen queda contenido en su propia columna y jamás se superpone
-     a las secciones full-span de abajo (diagnóstico / tablero / footer). */
-  .form-panel{ grid-area: form; min-width: 0; }
-  .results{ grid-area: summary; min-width: 0; }
-  #diagPanel{ grid-area: diag; }
-  .tablero-panel{ grid-area: tablero; }
-  .full-span{ grid-column: 1 / -1; }
 
   .panel{
     background: var(--panel);
@@ -234,20 +229,8 @@
 
   /* ---------- Results panel ---------- */
   .results{
+    width: 100%;
     position: static;
-    align-self: start;
-    height: fit-content;
-  }
-  @media (min-width: 900px){
-    .results{
-      position: sticky;
-      top: 74px;
-      /* Se limita a la altura visible de la ventana y gana scroll propio si
-         el contenido es más alto, de modo que nunca crece por encima de las
-         secciones full-span que vienen después en el grid. */
-      max-height: calc(100vh - 94px);
-      overflow-y: auto;
-    }
   }
 
   .readout{
@@ -271,13 +254,20 @@
   .row{
     display:flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     padding: 7px 0;
     font-size: 13.5px;
     gap: 10px;
   }
-  .row .k{ color: var(--text-dim); }
-  .row .v{ font-family: var(--mono); font-size: 14px; text-align:right; }
+  .row .k{ color: var(--text-dim); flex: 1 1 auto; min-width: 0; }
+  .row .v{
+    font-family: var(--mono);
+    font-size: 14px;
+    text-align: right;
+    flex: 0 1 auto;
+    min-width: 0;
+    word-break: break-word;
+  }
 
   .section-divider{
     border: none;
@@ -617,6 +607,9 @@
 </header>
 
 <main>
+  <!-- ================= COLUMNA IZQUIERDA ================= -->
+  <div class="main-content">
+
   <!-- ================= INPUT PANEL ================= -->
   <section class="panel form-panel" aria-label="Datos del circuito">
 
@@ -766,41 +759,14 @@
 
   </section>
 
-  <!-- ================= RESULTS PANEL ================= -->
-  <aside class="panel results" aria-label="Resumen de resultados">
-    <h2><span class="idx">Σ</span>Resumen del circuito</h2>
-
-    <div class="readout">
-      <div class="label">Corriente de servicio</div>
-      <div class="value" id="ibBig">0.00<small>A</small></div>
-    </div>
-
-    <div class="row"><span class="k">Tensión de servicio</span><span class="v" id="rVoltage">220 V mono.</span></div>
-    <div class="row"><span class="k">Carga</span><span class="v" id="rLoad">–</span></div>
-    <div class="row"><span class="k">Conductor</span><span class="v" id="rGauge">–</span></div>
-    <div class="row"><span class="k">Canalización / temp.</span><span class="v" id="rInstall">–</span></div>
-    <div class="row"><span class="k">Iz corregida</span><span class="v" id="rIz">–</span></div>
-    <div class="row"><span class="k">Disyuntor sugerido (In)</span><span class="v" id="rBreaker">–</span></div>
-    <div class="row"><span class="k">Caída de tensión</span><span class="v" id="rDrop">–</span></div>
-    <hr class="section-divider">
-    <div class="row"><span class="k">AWG equivalente</span><span class="v" id="rAwg2">–</span></div>
-    <div class="row"><span class="k">PE mínimo</span><span class="v" id="rPe2">–</span></div>
-    <div class="row"><span class="k">Diferencial (30 mA)</span><span class="v" id="rDiff2">–</span></div>
-
-    <div class="actions">
-      <button class="btn" onclick="copySummary()">📋 Copiar resumen</button>
-      <button class="btn primary" onclick="exportPDF()">📄 Exportar Ficha PDF</button>
-    </div>
-  </aside>
-
   <!-- ================= DIAGNÓSTICO NORMATIVO ================= -->
-  <section class="panel diag-panel full-span" id="diagPanel" aria-label="Diagnóstico y recomendaciones técnicas">
+  <section class="panel diag-panel" id="diagPanel" aria-label="Diagnóstico y recomendaciones técnicas">
     <h2><span class="idx">!</span>Recomendaciones técnicas y base normativa</h2>
     <div id="diagList"></div>
   </section>
 
   <!-- ================= TABLERO DE CARGAS ================= -->
-  <section class="panel full-span tablero-panel" aria-label="Tablero de cargas">
+  <section class="panel tablero-panel" aria-label="Tablero de cargas">
     <h2><span class="idx">T</span>Tablero de cargas — suma y alimentador general</h2>
 
     <div class="add-circuit-row">
@@ -847,6 +813,35 @@
 
     <p class="factor-note">Factores de demanda referenciales por tipo de circuito (ajustables a la tabla de tu curso o del pliego RIC N°03 / NCh Elec. 4/2003 aplicable). Cada circuito se calcula como potencia instalada × su propio factor de demanda; la suma resultante es la carga máxima demandada estimada del tablero. El alimentador y disyuntor general usan la tensión, cos φ, aislamiento y canalización configurados arriba.</p>
   </section>
+
+  </div><!-- /.main-content -->
+
+  <!-- ================= COLUMNA DERECHA: RESUMEN ================= -->
+  <aside class="panel results results-sidebar" aria-label="Resumen de resultados">
+    <h2><span class="idx">Σ</span>Resumen del circuito</h2>
+
+    <div class="readout">
+      <div class="label">Corriente de servicio</div>
+      <div class="value" id="ibBig">0.00<small>A</small></div>
+    </div>
+
+    <div class="row"><span class="k">Tensión de servicio</span><span class="v" id="rVoltage">220 V mono.</span></div>
+    <div class="row"><span class="k">Carga</span><span class="v" id="rLoad">–</span></div>
+    <div class="row"><span class="k">Conductor</span><span class="v" id="rGauge">–</span></div>
+    <div class="row"><span class="k">Canalización / temp.</span><span class="v" id="rInstall">–</span></div>
+    <div class="row"><span class="k">Iz corregida</span><span class="v" id="rIz">–</span></div>
+    <div class="row"><span class="k">Disyuntor sugerido (In)</span><span class="v" id="rBreaker">–</span></div>
+    <div class="row"><span class="k">Caída de tensión</span><span class="v" id="rDrop">–</span></div>
+    <hr class="section-divider">
+    <div class="row"><span class="k">AWG equivalente</span><span class="v" id="rAwg2">–</span></div>
+    <div class="row"><span class="k">PE mínimo</span><span class="v" id="rPe2">–</span></div>
+    <div class="row"><span class="k">Diferencial (30 mA)</span><span class="v" id="rDiff2">–</span></div>
+
+    <div class="actions">
+      <button class="btn" onclick="copySummary()">📋 Copiar resumen</button>
+      <button class="btn primary" onclick="exportPDF()">📄 Exportar Ficha PDF</button>
+    </div>
+  </aside>
 </main>
 
 <footer>
